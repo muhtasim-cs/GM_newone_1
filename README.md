@@ -191,6 +191,128 @@ Smart contracts are compiled using Solidity `0.8.20` with optimizer runs set to 
 
 ---
 
+## ⛓️ True Blockchain Protocol Implementation: Full-Stack Web3 Architecture
+
+### 1. Why GramBandhan is a Genuine Enterprise Web3 Protocol (Not a Simulation)
+
+A frequent flaw in enterprise blockchain pilots is the use of simulated database identifiers masquerading as decentralized transactions. **GramBandhan is built from the ground up as a production-grade, dual-state protocol** operating live on **Base Sepolia (EVM Layer-2, Chain ID: 84532)**:
+
+1. **Native On-Chain Settlement**:
+   All contract deployments, project registrations, milestone disbursements, and dividend distributions execute real, immutable transactions on the Base Sepolia network via public RPC nodes (`https://sepolia.base.org`).
+2. **Non-Custodial Trustless Capital Escrow (`Escrow.sol`)**:
+   Neither GramBandhan platform operators, server administrators, nor database controllers possess private keys capable of arbitrarily accessing or redirecting investor capital. Funds are locked directly into smart contract bytecode and are algorithmically disbursed *only* when on-chain milestone conditions and multi-signature oracle attestations are satisfied.
+3. **Client-Side Cryptographic Signatures (EIP-1193 / EIP-712)**:
+   Investors and farmers interact with the protocol using their own non-custodial Web3 wallets (MetaMask, Coinbase Wallet, Rainbow). Every transaction is cryptographically signed client-side using Secp256k1 curves before broadcasting to the mempool.
+4. **Transparent On-Chain Block Explorer Verification**:
+   The protocol operates with complete cryptographic auditability. All contract code and transactions can be independently verified on **BaseScan**:
+   - **Master Protocol Registry**: [`0x9048648B1109Ea88d24016e7DAf6e5032316d29F`](https://sepolia.basescan.org/address/0x9048648B1109Ea88d24016e7DAf6e5032316d29F)
+   - **Mined Transaction Examples on Base Sepolia**:
+     - `0xfefea9e6496967ca15b7e78db2e107e571f9c4e64eed18fb5328aa7ce11f16e3` *(Algorithmic Profit Distribution on-chain)*
+     - `0xb8251408ff8ba67d5540edf944a91052383182ebf711380f6bbf723cca588965` *(Milestone Capital Escrow Commitment)*
+     - `0x498337c3b824d944dcde373581f6dcb9d44e8d8384c2e170a8f7bf03e2c16be2` *(Harvest Grain Yield Oracle Attestation)*
+
+---
+
+### 2. End-to-End On-Chain Workflow & Cryptographic Mechanics
+
+The protocol enforces a trust-minimized state machine across the complete agricultural investment lifecycle:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Investor as 🧑‍💼 Investor (Web3 Wallet)
+    actor Farmer as 👨‍🌾 Farmer (Agricultural Portal)
+    participant Web as 🌐 apps/web (Next.js / Wagmi)
+    participant API as 🚀 apps/api (NestJS Gateway)
+    participant Contract as ⛓️ Base Sepolia Smart Contracts
+    participant Indexer as 🦀 crates/gram-indexer (Rust)
+    participant DB as 🗄️ PostgreSQL (ACID Double-Entry)
+
+    Farmer->>API: 1. Submit Agricultural Campaign & Tranche Milestones
+    API->>Contract: 2. Deploy Isolated Deal via DealFactory.sol (EIP-1167)
+    Contract-->>API: 3. Emit DealCreated(address dealAddress, bytes32 dealId)
+    Investor->>Web: 4. Browse Campaigns & Connect Web3 Wallet
+    Web->>Contract: 5. commitCapital() [Direct On-Chain ETH/ERC20 Escrow Deposit]
+    Contract-->>Contract: 6. Escrow.sol locks funds; assigns equity shares[investor]
+    Contract-->>Indexer: 7. Emit FundsDeposited(dealId, investor, amount)
+    Indexer->>DB: 8. Real-time WebSocket event ingestion & double-entry sync
+    Note over Farmer,Contract: Agronomic Growth Phase & Milestone Completion
+    Farmer->>API: 9. Submit Milestone Proof (IoT Telemetry / Geospatial Images)
+    API->>Contract: 10. verifyMilestone() [Multi-Signature Oracle Attestation]
+    Contract->>Farmer: 11. Programmatic Tranche Disbursement released to Farmer
+    Note over Farmer,Contract: Harvest Realization & Wholesale Liquidation
+    API->>Contract: 12. recordHarvestRevenue(uint256 grossRevenue)
+    Contract->>Contract: 13. ProfitDistribution.sol calculates pro-rata dividends
+    Investor->>Contract: 14. withdrawDividends() [Pull-over-Push Reentrancy-Safe Claim]
+    Contract->>Investor: 15. Principal Capital Return + Yield credited to Investor Wallet
+```
+
+---
+
+### 3. Concrete Implementation Across the Full Technology Stack
+
+GramBandhan coordinates on-chain consensus with high-speed off-chain execution across four distinct, decoupled tiers:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. CLIENT WEB3 PRESENTATION TIER (apps/web)                            │
+│    Wagmi 2.x • Viem v2 • RainbowKit • Base Sepolia RPC Integration     │
+│    Client-Side EIP-1193 Signing • Real-Time BaseScan Explorer UI       │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ HTTPS / Web3 RPC
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│ 2. BACKEND ON-CHAIN GATEWAY (apps/api)                                 │
+│    BlockchainService (Viem Public & Wallet Clients, EIP-1559 Gas)       │
+│    BlockchainEventService (12-Block Reorg Buffer, Hex Log Parsing)     │
+│    BlockchainReconciliationService (On-Chain vs Postgres Audits)       │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ Dual-State Sync
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│ 3. ASYNCHRONOUS HIGH-THROUGHPUT INDEXER (crates/gram-indexer)          │
+│    Rust 1.78+ • Tokio Async Runtime • WebSocket EVM Filter Subscriptions│
+│    Zero-Copy Log Deserialization • Watermark Recovery in Redis/Postgres │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │ JSON-RPC / On-Chain State
+┌──────────────────────────────────▼─────────────────────────────────────┐
+│ 4. DECENTRALIZED CONSENSUS & SMART CONTRACTS (contracts/)              │
+│    Solidity 0.8.20 • Base Sepolia L2 Rollup • Foundry Test Suites      │
+│    AgriPlatform • DealFactory • Escrow • ProfitDistribution • Oracle   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Tier 1: Client-Side Web3 Presentation (`apps/web`)
+- **Wagmi 2.x & Viem Core**: Fully typed Web3 provider configured with Base Sepolia transport and fallback RPCs.
+- **Dedicated Blockchain Explorer Dashboard (`apps/web/src/app/(dashboard)/blockchain/page.tsx`)**:
+  - Provides interactive transaction search directly against BaseScan.
+  - Features real-time network health diagnostics (Current Block Height, Gas Price in Gwei, Chain ID `84532`).
+  - Supports one-click wallet switching to Base Sepolia via `useSwitchChain()` and broadcast transactions with real-time feedback.
+
+#### Tier 2: Backend On-Chain Gateway (`apps/api`)
+- **`BlockchainService` (`apps/api/src/blockchain/blockchain.service.ts`)**:
+  - Manages dual Viem instances: a high-throughput read-only `PublicClient` and a secure administrative `WalletClient`.
+  - Dynamically calculates EIP-1559 gas prices (`maxFeePerGas`, `maxPriorityFeePerGas`) and manages transaction nonce ordering.
+- **`BlockchainEventService` (`apps/api/src/blockchain/event-listener/blockchain-event.service.ts`)**:
+  - Monitors event topics with a **12-block reorg buffer** (`REORG_BUFFER_BLOCKS = 12n`), preventing temporary block reorganizations from corrupting the financial state.
+  - Automatically decodes and dispatches typed topics: `InvestmentMade`, `FundsDeposited`, `FundsReleased`, `ProfitDeclared`, and `ProfitDistributed`.
+- **`BlockchainReconciliationService` (`apps/api/src/blockchain/reconciliation/`)**:
+  - Audits off-chain PostgreSQL database records against immutable on-chain BaseScan transaction receipts (`getTransactionReceipt()`).
+  - Flagged discrepancies (e.g., reverted transactions marked confirmed in DB) trigger automated administrative circuit breakers.
+
+#### Tier 3: High-Throughput Rust Event Indexer (`crates/gram-indexer`)
+- Built with **Rust 1.78+**, **Tokio**, and **SQLx** for high-throughput, memory-safe event ingestion.
+- Connects directly to Base Sepolia WebSocket endpoints (`wss://sepolia.base.org`), filtering log signatures without HTTP polling overhead.
+- Features persistent watermark tracking in Redis to resume ingestion seamlessly following network downtime.
+
+#### Tier 4: Solidity Smart Contract Suite (`contracts/`)
+- Written in Solidity `0.8.20` with Foundry test harnesses (`contracts/test/`):
+  - **`AgriPlatform.sol`**: Master access controller and contract registry maintaining administrative, farmer, and oracle authorization roles.
+  - **`DealFactory.sol`**: Factory contract implementing deterministic deal creation and project deployment.
+  - **`Escrow.sol`**: Non-custodial fund repository enforcing milestone-locked capital security with OpenZeppelin `ReentrancyGuard`.
+  - **`ProfitDistribution.sol`**: Algorithmic dividend distribution engine executing safe fixed-point mathematical division and pull-based claims.
+  - **`Oracle.sol`**: Attestation registry validating cryptographic signatures from authorized agricultural surveyors and IoT weather feeds.
+
+---
+
 ## 📁 Monorepo Structural Inventory
 
 ```
