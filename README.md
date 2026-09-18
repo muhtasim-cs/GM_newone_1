@@ -333,6 +333,10 @@ GramBandhan coordinates on-chain consensus with high-speed off-chain execution a
 ├── backend/                     # 📦 Self-Contained Backend Mirror (Standalone Ready)
 │   ├── src/, prisma/, contracts/, indexer/, Dockerfile, docker-compose.yml, README.md
 │
+├── database/                    # 🗄️ Unified PostgreSQL DDL & Team Handoff Documentation
+│   ├── grambandhan_unified_schema.sql  # Complete 16-module DDL + double-entry + check constraints
+│   └── DATABASE_HANDOFF.md             # Step-by-step setup guide for teammates & evaluators
+│
 ├── contracts/                   # ⛓️ Solidity 0.8.20 Smart Contracts & Foundry Harness
 │   ├── src/                     # Core smart contracts, interfaces, and OpenZeppelin libraries
 │   ├── test/                    # Foundry test suites (DealFactory.t.sol, Escrow.t.sol, etc.)

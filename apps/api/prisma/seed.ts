@@ -11,6 +11,8 @@ const roleDefinitions: Array<{ name: string; description: string }> = [
   'ADMIN',
   'INVESTOR',
   'FARMER',
+  'FIELD_AGENT',
+  'BUYER',
 ].map((name) => ({
   name,
   description: `${name.replace(/_/g, ' ').toLowerCase()} role for the Agriculture Profit-Sharing Platform`,
@@ -310,12 +312,114 @@ async function seedChartOfAccounts(): Promise<void> {
   console.log(`Seeded ${accountDefinitions.length} chart of accounts entries`);
 }
 
+async function seedSRSModules(adminId: string): Promise<void> {
+  const agentPassword = await bcrypt.hash('agent123', 10);
+  const buyerPassword = await bcrypt.hash('buyer123', 10);
+
+  // 1. Seed Field Agent
+  const agentUser = await prisma.user.upsert({
+    where: { email: 'agent@agriplatform.com' },
+    update: { passwordHash: agentPassword },
+    create: {
+      email: 'agent@agriplatform.com',
+      passwordHash: agentPassword,
+      firstName: 'Tariqul',
+      lastName: 'Islam',
+      phone: '+8801711223344',
+      role: UserRole.FIELD_AGENT,
+      isEmailVerified: true,
+    },
+  });
+
+  await prisma.fieldAgentProfile.upsert({
+    where: { id: agentUser.id }, // Using agentUser.id as deterministic profile id
+    update: { assignedRegion: 'Rajshahi & Bogura' },
+    create: {
+      id: agentUser.id,
+      userId: agentUser.id,
+      assignedRegion: 'Rajshahi & Bogura',
+      nationalId: '1987541239874',
+      rating: 4.85,
+      isVerified: true,
+    },
+  });
+
+  // 2. Seed Marketplace Buyer
+  const buyerUser = await prisma.user.upsert({
+    where: { email: 'buyer@agriplatform.com' },
+    update: { passwordHash: buyerPassword },
+    create: {
+      email: 'buyer@agriplatform.com',
+      passwordHash: buyerPassword,
+      firstName: 'Tanvir',
+      lastName: 'Ahmed',
+      phone: '+8801822334455',
+      role: UserRole.BUYER,
+      isEmailVerified: true,
+    },
+  });
+
+  // 3. Seed Marketplace Product Listings
+  const listings = [
+    {
+      name: 'Organic Miniket Rice',
+      category: 'Grains',
+      price: 78.00,
+      quantity: 2500,
+      unit: 'kg',
+      description: 'Pesticide-free aromatic Miniket rice direct from Dinajpur paddy fields.',
+      deliveryArea: 'Dhaka, Rajshahi, Rangpur',
+    },
+    {
+      name: 'Rajshahi Premium Fazli Mangoes',
+      category: 'Fruits',
+      price: 135.00,
+      quantity: 800,
+      unit: 'kg',
+      description: 'Naturally ripened, export-grade Fazli mangoes from Bagha orchards.',
+      deliveryArea: 'Nationwide',
+    },
+    {
+      name: 'Pure Cold-Pressed Mustard Oil',
+      category: 'Oils & Spices',
+      price: 290.00,
+      quantity: 350,
+      unit: 'liter',
+      description: '100% natural, unadulterated ghani-pressed mustard oil with high pungency.',
+      deliveryArea: 'Dhaka & Chattogram',
+    },
+  ];
+
+  for (const item of listings) {
+    await prisma.productListing.create({
+      data: {
+        producerId: adminId,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        quantity: item.quantity,
+        unit: item.unit,
+        description: item.description,
+        deliveryArea: item.deliveryArea,
+        isAvailable: true,
+      },
+    });
+  }
+
+  console.log(`Seeded SRS Extension Modules (Field Agent, Buyer, Product Listings)`);
+}
+
 async function main(): Promise<void> {
   const roleMap = await seedRoles();
   await seedPermissions(roleMap);
   await seedAdminUser(roleMap);
   await seedCrops();
   await seedChartOfAccounts();
+
+  const admin = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+  if (admin) {
+    await seedSRSModules(admin.id);
+  }
 
   console.log('Database seed completed successfully');
 }
