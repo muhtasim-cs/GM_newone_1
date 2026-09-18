@@ -108,6 +108,80 @@ graph TD
 
 ---
 
+## 🔐 Dual-Authentication System & Access Control Specification
+
+GramBandhan synthesizes institutional Web2 security with non-custodial Web3 sovereignty via a unified **Dual-Authentication Architecture**:
+1. **Institutional JWT Authentication**: Secure bcrypt-hashed credentials with short-lived HMAC-SHA256 access tokens (15m expiry) and cryptographically rotated refresh tokens (7d sliding window) for farmers, field inspectors, supply chain buyers, and system administrators.
+2. **Web3 Nonce-Signature Authentication**: EIP-191 / EIP-712 compliant challenge-response authentication. Blockchain investors connect non-custodial EVM wallets (MetaMask, Rainbow, Coinbase Wallet), sign an ephemeral cryptographic nonce, and receive scoped JWT credentials without ever exposing private keys or relying on centralized password databases.
+
+### 1. Authentication Endpoints Matrix (9 Core Contracts)
+
+All authentication endpoints are unified under the `/api/v1/auth` gateway:
+
+| Method | Endpoint | Description | Auth Required | Specification & Guarantees |
+| :---: | :--- | :--- | :---: | :--- |
+| `POST` | `/api/v1/auth/register` | Register new user account | No | Validates role, phone, and bcrypt password hashing (cost factor 10) |
+| `POST` | `/api/v1/auth/login` | Login with email + password | No | Returns sanitized `User` profile and dual `accessToken` + `refreshToken` |
+| `POST` | `/api/v1/auth/refresh` | Refresh JWT access token | No | Validates refresh token signature; rotates active token pair |
+| `GET` | `/api/v1/auth/me` | Get current authenticated user | 🛡️ JWT | Protected via `JwtAuthGuard`; extracts `userId` from bearer token claims |
+| `POST` | `/api/v1/auth/logout` | Invalidate current session | 🛡️ JWT | Revokes active bearer session; clears refresh token cache |
+| `POST` | `/api/v1/auth/web3/nonce` | Generate nonce for Web3 auth | No | Emits cryptographically random, timestamped challenge nonce per address |
+| `POST` | `/api/v1/auth/web3/login` | Login via wallet signature | No | Recovers Secp256k1 public key via Viem; issues role-bound investor session |
+| `POST` | `/api/v1/auth/forgot-password` | Request password reset email | No | Emits time-limited, single-use password reset token via SMTP worker |
+| `POST` | `/api/v1/auth/reset-password` | Reset password with token | No | Validates reset token and updates bcrypt password hash |
+
+---
+
+### 2. Dual-Authentication Architectural Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Web3User as 🦊 Web3 Investor (MetaMask)
+    actor Web2User as 👨‍🌾 Farmer / Platform Admin
+    participant Gateway as 🚪 API Gateway (/api/v1/auth)
+    participant AuthService as ⚙️ AuthService
+    participant ViemCrypto as 🔐 Viem Cryptographic Engine
+    participant DB as 🗄️ PostgreSQL (Users & Sessions)
+    participant JWT as 🎟️ JWT Token Generator
+
+    alt Path A: Web3 Cryptographic Challenge-Response Flow
+        Web3User->>Gateway: POST /auth/web3/nonce { walletAddress }
+        Gateway->>AuthService: getNonce(walletAddress)
+        AuthService-->>Web3User: { nonce: "agrishare_1726000000_abc123" }
+        Web3User->>Web3User: Sign message with Secp256k1 private key
+        Web3User->>Gateway: POST /auth/web3/login { walletAddress, signature, nonce }
+        Gateway->>AuthService: web3Login(walletAddress, signature, nonce)
+        AuthService->>ViemCrypto: verifyMessage({ address, message: nonce, signature })
+        ViemCrypto-->>AuthService: Cryptographic signature valid
+        AuthService->>DB: Upsert user (role: INVESTOR, address binding)
+        AuthService->>JWT: generateTokens(user)
+        JWT-->>Web3User: { user, accessToken, refreshToken }
+    else Path B: Traditional Email / Password Flow
+        Web2User->>Gateway: POST /auth/login { email, password }
+        Gateway->>AuthService: login(loginDto)
+        AuthService->>DB: findByEmail(email)
+        DB-->>AuthService: user with passwordHash
+        AuthService->>AuthService: bcrypt.compare(password, passwordHash)
+        AuthService->>JWT: generateTokens(user)
+        JWT-->>Web2User: { user, accessToken, refreshToken }
+    end
+```
+
+---
+
+### 3. Role-Based Access Control (RBAC) & Permission Scopes
+
+| Role | Web3 Wallet Login | Platform Dashboard | Milestone Attestation | Escrow Commitment | Profit Claim |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `ADMIN` | ✅ | Full Admin Console | ✅ Override & Approve | 👁️ Audit Escrow | ✅ Ledger Reconciliation |
+| `FARMER` | ✅ | Farmer Farm Management | ❌ View Only | ❌ Recipient | ✅ Receive Milestone Tranche |
+| `INVESTOR` | ✅ | Investor Portfolio | ❌ View Only | ✅ Deposit to Escrow | ✅ Withdraw Dividends |
+| `FIELD_AGENT` | ❌ | Field Inspection App | ✅ Sign Off Milestones | ❌ N/A | ❌ N/A |
+| `BUYER` | ❌ | Wholesale Portal | ❌ N/A | ❌ N/A | ✅ Purchase Wholesale Yield |
+
+---
+
 ## 📐 Mathematical & Algorithmic Foundations
 
 ### 1. Capital Allocation & Pro-Rata Investment Fractionalization

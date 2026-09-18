@@ -46,3 +46,9 @@ Desktop.ini
 coverage/
 .nyc_output/
 *.lcov
+
+# Cache & Build Info
+*.tsbuildinfo
+.turbo/
+graphify-out/
+.agents/
